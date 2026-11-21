@@ -21,6 +21,7 @@ data class Contact(
     val hasVideoCall: Boolean = false,
     val hasVoiceCall: Boolean = false,
     val hasPhoneCall: Boolean = false,
+    val trustedForAutoAnswer: Boolean = false,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
 ) : Parcelable {

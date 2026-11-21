@@ -1,8 +1,6 @@
 package tech.huangsh.firstsight.ui.screens.contact
 
-import android.Manifest
 import android.net.Uri
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -37,6 +35,7 @@ import tech.huangsh.firstsight.R
 import tech.huangsh.firstsight.data.model.Contact
 import com.hjq.permissions.XXPermissions
 import com.hjq.permissions.OnPermissionCallback
+import com.hjq.permissions.Permission
 import tech.huangsh.firstsight.utils.rememberCameraAppIcon
 import tech.huangsh.firstsight.utils.rememberGalleryAppIcon
 import java.io.File
@@ -60,11 +59,18 @@ fun ContactDetailScreen(
         mutableStateOf((contact?.hasPhoneCall ?: false) && !contact?.phone.isNullOrBlank())
     }
     var avatarUri by remember { mutableStateOf(contact?.avatarUri) }
+    var trustedForAutoAnswer by remember { mutableStateOf(contact?.trustedForAutoAnswer ?: false) }
 
     // 电话号码为空时不允许保留"打电话"勾选
     LaunchedEffect(phone) {
         if (phone.isBlank() && hasPhoneCall) {
             hasPhoneCall = false
+        }
+    }
+
+    LaunchedEffect(wechatNickname) {
+        if (wechatNickname.isBlank() && trustedForAutoAnswer) {
+            trustedForAutoAnswer = false
         }
     }
     
@@ -88,7 +94,6 @@ fun ContactDetailScreen(
         uri?.let {
             // 立即更新本地avatarUri状态，用于预览
             avatarUri = it.toString()
-            Log.d("ContactDetailScreen", "Selected avatar URI: $avatarUri")
             // 通知Activity处理图片复制
             onImageSelected(it)
         }
@@ -101,7 +106,6 @@ fun ContactDetailScreen(
         if (success && tempCameraUri != null) {
             // 相机拍照成功，使用临时URI
             avatarUri = tempCameraUri.toString()
-            Log.d("ContactDetailScreen", "Camera photo taken: $tempCameraUri")
             // 通知Activity处理图片复制
             onImageSelected(tempCameraUri!!)
         }
@@ -359,6 +363,33 @@ fun ContactDetailScreen(
                             }
                         }
                     }
+
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = stringResource(R.string.contact_trusted_auto_answer),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = stringResource(R.string.contact_trusted_auto_answer_desc),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Switch(
+                                checked = trustedForAutoAnswer,
+                                onCheckedChange = { trustedForAutoAnswer = it },
+                                enabled = (isEditMode || contact == null) && wechatNickname.isNotBlank()
+                            )
+                        }
+                    }
                 }
 
                 // 保存和取消按钮
@@ -388,6 +419,7 @@ fun ContactDetailScreen(
                                             hasVideoCall = hasVideoCall,
                                             hasVoiceCall = hasVoiceCall,
                                             hasPhoneCall = effectivePhoneCall,
+                                            trustedForAutoAnswer = trustedForAutoAnswer,
                                             order = contact?.order ?: 0
                                         )
                                         onSave(newContact)
@@ -417,7 +449,7 @@ fun ContactDetailScreen(
                 showAvatarPickerBottomSheet = false
                 // 使用XXPermissions请求相机权限并启动相机
                 XXPermissions.with(context as androidx.activity.ComponentActivity)
-                    .permission(Manifest.permission.CAMERA)
+                    .permission(Permission.CAMERA)
                     .request(object : OnPermissionCallback {
                         override fun onGranted(permissions: MutableList<String>, allGranted: Boolean) {
                             if (allGranted) {

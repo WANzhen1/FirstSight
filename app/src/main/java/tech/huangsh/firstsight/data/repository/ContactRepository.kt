@@ -9,7 +9,6 @@ import android.net.Uri
 import android.provider.ContactsContract
 import android.widget.Toast
 import androidx.core.content.ContextCompat
-import androidx.core.net.toUri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -254,8 +253,14 @@ class ContactRepository(
      * 发起电话呼叫
      */
     fun makePhoneCall(phoneNumber: String): Intent {
-        return Intent(Intent.ACTION_CALL).apply {
-            data = "tel:$phoneNumber".toUri()
+        val cleaned = phoneNumber.trim()
+        val action = if (cleaned.any { it == '*' || it == '#' || it == ';' || it == ',' || it == '%' }) {
+            Intent.ACTION_DIAL
+        } else {
+            Intent.ACTION_CALL
+        }
+        return Intent(action).apply {
+            data = Uri.fromParts("tel", cleaned, null)
             flags = FLAG_ACTIVITY_NEW_TASK
         }
     }

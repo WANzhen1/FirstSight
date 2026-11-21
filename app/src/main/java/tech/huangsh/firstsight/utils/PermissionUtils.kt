@@ -4,7 +4,6 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
 import android.text.TextUtils
@@ -35,9 +34,6 @@ object PermissionUtils {
             Permission.ACCESS_COARSE_LOCATION,
             Permission.GET_INSTALLED_APPS
         )
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            permissions.add(Permission.POST_NOTIFICATIONS)
-        }
         return permissions.toTypedArray()
     }
 
@@ -96,13 +92,6 @@ object PermissionUtils {
     }
 
     /**
-     * 悬浮窗权限是否已授予
-     */
-    fun canDrawOverlays(context: Context): Boolean {
-        return Settings.canDrawOverlays(context)
-    }
-
-    /**
      * 是否已忽略电池优化
      */
     fun isIgnoringBatteryOptimizations(context: Context): Boolean {
@@ -121,20 +110,6 @@ object PermissionUtils {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
         )
-    }
-
-    /**
-     * 跳转本应用的悬浮窗授权页，失败时退回应用详情页
-     */
-    fun openOverlaySettings(context: Context) {
-        val direct = Intent(
-            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-            Uri.parse("package:${context.packageName}")
-        ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-
-        if (!startSafely(context, direct)) {
-            startSafely(context, appDetailsIntent(context))
-        }
     }
 
     /**

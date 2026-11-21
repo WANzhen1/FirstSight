@@ -1,10 +1,15 @@
 package tech.huangsh.firstsight.ui.screens.home
 
-import android.Manifest
+import android.app.Activity
+import android.app.KeyguardManager
+import android.content.Context
 import android.content.Intent
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import com.hjq.permissions.XXPermissions
 import com.hjq.permissions.OnPermissionCallback
+import com.hjq.permissions.Permission
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Size
@@ -74,6 +79,15 @@ fun HomeScreen(viewModel: MainViewModel) {
 
     // 连点 7 次后先弹窗确认，确认后才进入设置
     var showSettingsConfirm by remember { mutableStateOf(false) }
+    var pendingPhoneNumber by remember { mutableStateOf<String?>(null) }
+    var pendingPhoneName by remember { mutableStateOf<String?>(null) }
+    val settingsAuthLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            context.startActivity(Intent(context, SettingsActivity::class.java))
+        }
+    }
     LaunchedEffect(Unit) {
         viewModel.openSettingsRequested.collect {
             showSettingsConfirm = true
@@ -83,7 +97,7 @@ fun HomeScreen(viewModel: MainViewModel) {
     // 使用XXPermissions申请电话权限并拨打电话
     fun requestPhonePermissionAndCall(phoneNumber: String, contactName: String?) {
         XXPermissions.with(context as androidx.activity.ComponentActivity)
-            .permission(Manifest.permission.CALL_PHONE)
+            .permission(Permission.CALL_PHONE)
             .request(object : OnPermissionCallback {
                 override fun onGranted(permissions: MutableList<String>, allGranted: Boolean) {
                     if (allGranted) {
@@ -106,6 +120,21 @@ fun HomeScreen(viewModel: MainViewModel) {
             })
     }
 
+    fun openSettingsWithAuth() {
+        val keyguard = context.getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
+        if (keyguard?.isDeviceSecure == true) {
+            val intent = keyguard.createConfirmDeviceCredentialIntent(
+                context.getString(R.string.settings_auth_title),
+                context.getString(R.string.settings_auth_message)
+            )
+            if (intent != null) {
+                settingsAuthLauncher.launch(intent)
+                return
+            }
+        }
+        context.startActivity(Intent(context, SettingsActivity::class.java))
+    }
+
     Scaffold(
         modifier = Modifier
             .fillMaxSize()
@@ -114,10 +143,11 @@ fun HomeScreen(viewModel: MainViewModel) {
         containerColor = Color.Transparent,
         // 不自动注入系统状态栏和导航栏安全区留白，使顶部卡片贴近顶部、底部列表延伸至屏幕底边
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
-    ) { _ ->
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(innerPadding)
                 .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 0.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -312,8 +342,8 @@ fun HomeScreen(viewModel: MainViewModel) {
             onPhoneCall = { phone ->
                 val contact = selectedContact ?: return@ContactActionBottomSheet
                 if (viewModel.checkSimForPhoneCall()) {
-                    // 使用XXPermissions申请电话权限并拨打电话
-                    requestPhonePermissionAndCall(phone, contact.name)
+                    pendingPhoneNumber = phone
+                    pendingPhoneName = contact.name
                     viewModel.hideBottomSheet()
                 }
             },
@@ -348,7 +378,7 @@ fun HomeScreen(viewModel: MainViewModel) {
                     TextButton(
                         onClick = {
                             showSettingsConfirm = false
-                            context.startActivity(Intent(context, SettingsActivity::class.java))
+                            openSettingsWithAuth()
                         }
                     ) {
                         Text(
@@ -363,6 +393,59 @@ fun HomeScreen(viewModel: MainViewModel) {
                         Text(
                             text = stringResource(R.string.cancel),
                             fontSize = 18.sp
+                        )
+                    }
+                }
+            )
+        }
+
+        if (pendingPhoneNumber != null) {
+            val number = pendingPhoneNumber ?: ""
+            val contactName = pendingPhoneName ?: ""
+            AlertDialog(
+                onDismissRequest = {
+                    pendingPhoneNumber = null
+                    pendingPhoneName = null
+                },
+                title = {
+                    Text(
+                        text = stringResource(R.string.phone_confirm_title),
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                text = {
+                    Text(
+                        text = stringResource(R.string.phone_confirm_message, contactName, number),
+                        fontSize = 20.sp,
+                        lineHeight = 30.sp
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            pendingPhoneNumber = null
+                            pendingPhoneName = null
+                            requestPhonePermissionAndCall(number, contactName)
+                        }
+                    ) {
+                        Text(
+                            text = stringResource(R.string.confirm),
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            pendingPhoneNumber = null
+                            pendingPhoneName = null
+                        }
+                    ) {
+                        Text(
+                            text = stringResource(R.string.cancel),
+                            fontSize = 20.sp
                         )
                     }
                 }

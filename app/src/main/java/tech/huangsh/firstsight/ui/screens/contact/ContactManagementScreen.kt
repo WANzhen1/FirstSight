@@ -1,10 +1,10 @@
 package tech.huangsh.firstsight.ui.screens.contact
 
-import android.Manifest
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import com.hjq.permissions.XXPermissions
 import com.hjq.permissions.OnPermissionCallback
+import com.hjq.permissions.Permission
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -105,19 +105,11 @@ fun ContactManagementScreen(
         exitBatchDeleteMode()
     }
 
-    // Log contact data for debugging
-    LaunchedEffect(contacts) {
-        android.util.Log.d("ContactList", "Contacts loaded: ${contacts.size}")
-        contacts.forEach { contact ->
-            android.util.Log.d("ContactList", "Contact: ${contact.name}, avatarUri: ${contact.avatarUri}")
-        }
-    }
-
     // 检查并请求通讯录权限后打开导入弹窗
     fun requestContactsAndOpenImport() {
         val activity = context as? androidx.activity.ComponentActivity ?: return
         XXPermissions.with(activity)
-            .permission(Manifest.permission.READ_CONTACTS)
+            .permission(Permission.READ_CONTACTS)
             .request(object : OnPermissionCallback {
                 override fun onGranted(permissions: MutableList<String>, allGranted: Boolean) {
                     if (allGranted) {

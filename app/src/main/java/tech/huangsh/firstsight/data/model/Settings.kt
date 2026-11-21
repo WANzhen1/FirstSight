@@ -26,7 +26,6 @@ data class Settings(
     val launcherMode: Boolean = true,
     val floatingBallEnabled: Boolean = true,
     val autoStartEnabled: Boolean = true,
-    val password: String = "123456", // 默认密码
     val isDefaultLauncher: Boolean = false // 是否为默认桌面
 )
 

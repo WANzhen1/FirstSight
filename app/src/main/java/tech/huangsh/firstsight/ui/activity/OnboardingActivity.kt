@@ -53,7 +53,6 @@ class OnboardingActivity : ComponentActivity() {
                     state = state,
                     onRequestRuntimePermissions = { requestRuntimePermissions() },
                     onOpenAccessibilitySettings = { viewModel.openAccessibilitySettings() },
-                    onOpenOverlaySettings = { viewModel.openOverlaySettings() },
                     onOpenPowerPolicySettings = { viewModel.openPowerPolicySettings() },
                     onOpenAutoStartSettings = { viewModel.openAutoStartSettings() },
                     onStart = { finishOnboarding() }
