@@ -89,6 +89,12 @@
   <string name="settings">设置</string>
   <string name="settings_confirm_title">进入设置</string>
   <string name="settings_confirm_message">确定要进入设置界面吗？</string>
+  <string name="settings_auth_title">验证身份</string>
+  <string name="settings_auth_message">请使用设备锁屏密码或指纹验证后进入设置</string>
+  <string name="phone_confirm_title">确认拨打电话</string>
+  <string name="phone_confirm_message">确定要拨打 %1$s 吗？\n%2$s</string>
+  <string name="contact_trusted_auto_answer">可信家人（允许自动接听）</string>
+  <string name="contact_trusted_auto_answer_desc">只有标记为可信家人的联系人，才会在开启“仅接听家人”时被自动接听</string>
   <string name="settings_back">返回</string>
   <string name="voice_settings">语音设置</string>
   <string name="voice_assistant">语音辅助</string>
@@ -151,9 +157,9 @@
   <string name="wechat_network_disconnected">当前网络断开，无法操作拨打微信视频和语音</string>
   <string name="phone_sim_unavailable">未检测到手机卡，无法拨打电话</string>
   <string name="wechat_auto_answer">微信来电自动接听</string>
-  <string name="wechat_auto_answer_desc">收到微信视频或语音通话时自动接听（需保持无障碍服务开启）</string>
-  <string name="wechat_auto_answer_contacts_only">仅接听已添加的家人</string>
-  <string name="wechat_auto_answer_contacts_only_desc">开启后仅自动接听联系人列表中的来电，避免误接陌生人电话</string>
+  <string name="wechat_auto_answer_desc">收到微信视频或语音通话时自动接听（仅解锁状态，需保持无障碍服务开启）</string>
+  <string name="wechat_auto_answer_contacts_only">仅接听可信家人</string>
+  <string name="wechat_auto_answer_contacts_only_desc">仅自动接听联系人中标记为“可信家人”的来电；微信只显示昵称，仍请只对信任的人开启</string>
   <string name="wechat_auto_speakerphone">自动免提</string>
   <string name="wechat_auto_speakerphone_desc">自动接听接通后自动开启扬声器免提</string>
   <string name="call_auto_return_home">挂断自动返回首页</string>
@@ -172,8 +178,6 @@
   <string name="onboarding_group_basic_desc">用于拨打电话、导入联系人、拍摄头像、获取天气和读取应用列表</string>
   <string name="onboarding_group_accessibility">无障碍服务</string>
   <string name="onboarding_group_accessibility_desc">一键微信视频、微信语音通话必须开启此服务</string>
-  <string name="onboarding_group_overlay">悬浮窗权限</string>
-  <string name="onboarding_group_overlay_desc">用于显示提醒窗口</string>
   <string name="onboarding_group_battery">忽略电池优化</string>
   <string name="onboarding_group_battery_desc">避免系统休眠后收不到提醒</string>
   <string name="onboarding_granted">已开启</string>

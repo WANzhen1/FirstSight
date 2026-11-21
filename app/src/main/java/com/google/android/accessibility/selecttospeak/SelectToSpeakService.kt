@@ -3,6 +3,7 @@ package com.google.android.accessibility.selecttospeak
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
 import android.accessibilityservice.GestureDescription.StrokeDescription
+import android.app.KeyguardManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Path
@@ -160,6 +161,10 @@ class SelectToSpeakService : AccessibilityService() {
             return
         }
 
+        if (!isRelevantWindowPackage(event.packageName?.toString()) &&
+            event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+        ) return
+
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             currentWindowClassName = event.className?.toString().orEmpty()
         }
@@ -234,8 +239,9 @@ class SelectToSpeakService : AccessibilityService() {
     private fun stepBackToIndex() {
         if (!isInWeChat()) return
 
-        val tabs = rootInActiveWindow
-            ?.findAccessibilityNodeInfosByViewId(WeChatId.TABLES.id)
+        val root = weChatRoot() ?: return
+        val tabs = root
+            .findAccessibilityNodeInfosByViewId(WeChatId.TABLES.id)
             .orEmpty()
         if (tabs.isNotEmpty()) {
             tabs.first().click()
@@ -263,7 +269,7 @@ class SelectToSpeakService : AccessibilityService() {
      */
     private fun stepOpenContact() {
         val target = normalizeForMatch(WeChatData.value)
-        val root = rootInActiveWindow ?: return
+        val root = weChatRoot() ?: return
         val candidates = root.findAccessibilityNodeInfosByViewId(WeChatId.LIST.id)
         if (candidates.isNullOrEmpty()) return
 
@@ -330,7 +336,7 @@ class SelectToSpeakService : AccessibilityService() {
     private fun isDialogVisible(): Boolean {
         if (isDialogClass(lastClassName)) return true
 
-        val root = rootInActiveWindow ?: return false
+        val root = weChatRoot() ?: return false
         // 弹窗容器存在，且里面确实有通话选项，才算弹窗已就绪
         val hasDialogContainer = root
             .findAccessibilityNodeInfosByViewId(WeChatId.DIALOG.id)
@@ -343,11 +349,14 @@ class SelectToSpeakService : AccessibilityService() {
         className.contains(WeChatActivity.DIALOG.id) ||
             className == WeChatActivity.DIALOG_OLD.id
 
+    private fun weChatRoot(): AccessibilityNodeInfo? =
+        rootInActiveWindow?.takeIf { it.packageName?.toString() == WECHAT_PACKAGE }
+
     private fun findById(viewId: String): AccessibilityNodeInfo? =
-        rootInActiveWindow?.findAccessibilityNodeInfosByViewId(viewId)?.firstOrNull()
+        weChatRoot()?.findAccessibilityNodeInfosByViewId(viewId)?.firstOrNull()
 
     private fun findByText(text: String): AccessibilityNodeInfo? =
-        rootInActiveWindow?.findAccessibilityNodeInfosByText(text)?.firstOrNull()
+        weChatRoot()?.findAccessibilityNodeInfosByText(text)?.firstOrNull()
 
     private fun pressBack() {
         val now = SystemClock.uptimeMillis()
@@ -380,6 +389,10 @@ class SelectToSpeakService : AccessibilityService() {
     }
 
     private fun performClick(x: Float, y: Float) {
+        if (hasForeignWindowAt(x, y)) {
+            Log.w(tag, "skip click blocked by foreign window")
+            return
+        }
         markSelfAction()
         val gestureBuilder = GestureDescription.Builder()
         val path = Path()
@@ -397,6 +410,8 @@ class SelectToSpeakService : AccessibilityService() {
      * 3. 微信 App 内部顶部的悬浮来电条（自带红色挂断与绿色接听按钮）
      */
     private fun checkIncomingWeChatCall(forceScan: Boolean = false) {
+        val keyguard = getSystemService(KEYGUARD_SERVICE) as? KeyguardManager
+        if (keyguard?.isKeyguardLocked == true) return
         val now = SystemClock.uptimeMillis()
         if (now - lastAutoAnswerAt < AUTO_ANSWER_COOLDOWN_MS) return
         if (!forceScan && now - lastAutoAnswerScanAt < AUTO_ANSWER_SCAN_INTERVAL_MS) return
@@ -669,8 +684,7 @@ class SelectToSpeakService : AccessibilityService() {
         val roots = getRelevantWindowRoots()
         for (root in roots) {
             val pkg = root.packageName?.toString().orEmpty()
-            // 微信自身全屏页不走横幅展开；如果在微信内且没有直接按钮，可能是聊天列表消息摘要
-            if (pkg == WECHAT_PACKAGE) continue
+            if (!isSystemUiPackage(pkg)) continue
 
             val nodes = collectAllNodes(root)
             val inviteNode = nodes.firstOrNull { node ->
@@ -706,9 +720,37 @@ class SelectToSpeakService : AccessibilityService() {
 
     private fun getRelevantWindowRoots(): List<AccessibilityNodeInfo> {
         return buildList {
-            windows?.mapNotNullTo(this) { it.root }
-            rootInActiveWindow?.let { if (it !in this) add(it) }
+            windows?.mapNotNullTo(this) { window ->
+                window.root?.takeIf { isRelevantWindowPackage(it.packageName?.toString()) }
+            }
+            rootInActiveWindow
+                ?.takeIf { isRelevantWindowPackage(it.packageName?.toString()) }
+                ?.let { if (it !in this) add(it) }
         }
+    }
+
+    private fun isSystemUiPackage(pkg: String): Boolean =
+        pkg == "com.android.systemui" || pkg == "com.miui.systemui"
+
+    private fun isRelevantWindowPackage(pkg: String?): Boolean {
+        if (pkg.isNullOrBlank()) return false
+        return pkg == WECHAT_PACKAGE ||
+            pkg == packageName ||
+            isSystemUiPackage(pkg) ||
+            isInCallPackage(pkg)
+    }
+
+    private fun hasForeignWindowAt(x: Float, y: Float): Boolean {
+        val windowList = windows ?: return false
+        for (window in windowList) {
+            val root = window.root ?: continue
+            val pkg = root.packageName?.toString().orEmpty()
+            if (pkg == WECHAT_PACKAGE || pkg == packageName || isSystemUiPackage(pkg)) continue
+            val bounds = Rect()
+            if (runCatching { root.getBoundsInScreen(bounds) }.isFailure) continue
+            if (bounds.contains(x.toInt(), y.toInt())) return true
+        }
+        return false
     }
 
     private fun collectAllNodes(root: AccessibilityNodeInfo): List<AccessibilityNodeInfo> {
@@ -773,6 +815,8 @@ class SelectToSpeakService : AccessibilityService() {
     }
 
     private fun tapBottomCircleOrParent(node: AccessibilityNodeInfo, actionName: String): Boolean {
+        val activeRoot = rootInActiveWindow ?: return false
+        if (activeRoot.packageName?.toString() != WECHAT_PACKAGE) return false
         val metrics = resources.displayMetrics
         val maxW = (metrics.widthPixels * 0.48f).toInt()
         val maxH = (metrics.heightPixels * 0.35f).toInt()
@@ -794,9 +838,7 @@ class SelectToSpeakService : AccessibilityService() {
                 return true
             }
 
-            val root = rootInActiveWindow ?: getRelevantWindowRoots().firstOrNull {
-                it.packageName?.toString() == WECHAT_PACKAGE
-            }
+            val root: AccessibilityNodeInfo? = activeRoot
             if (root != null) {
                 val maxHorizOffset = metrics.density * 60f
                 val minVertGap = metrics.density * 4f
@@ -851,6 +893,7 @@ class SelectToSpeakService : AccessibilityService() {
     }
 
     private fun tapBannerNode(node: AccessibilityNodeInfo): Boolean {
+        if (!isSystemUiPackage(node.packageName?.toString().orEmpty())) return false
         val metrics = resources.displayMetrics
         val statusBarHeight = getStatusBarHeight()
         val maxBannerH = (metrics.heightPixels * 0.35f).toInt()

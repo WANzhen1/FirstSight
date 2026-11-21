@@ -20,14 +20,12 @@ import javax.inject.Inject
 data class OnboardingState(
     val runtimeGranted: Boolean = false,
     val accessibilityEnabled: Boolean = false,
-    val overlayGranted: Boolean = false,
     val powerPolicyConfigured: Boolean = false,
     val autoStartConfigured: Boolean = false
 ) {
     val allGranted: Boolean
         get() = runtimeGranted &&
             accessibilityEnabled &&
-            overlayGranted &&
             powerPolicyConfigured &&
             autoStartConfigured
 }
@@ -73,7 +71,6 @@ class OnboardingViewModel @Inject constructor(
             _state.value = OnboardingState(
                 runtimeGranted = PermissionUtils.areRuntimePermissionsGranted(context),
                 accessibilityEnabled = PermissionUtils.isAccessibilityServiceEnabled(context),
-                overlayGranted = PermissionUtils.canDrawOverlays(context),
                 powerPolicyConfigured = powerConfigured || batteryIgnored,
                 autoStartConfigured = autoStartConfigured
             )
@@ -82,10 +79,6 @@ class OnboardingViewModel @Inject constructor(
 
     fun openAccessibilitySettings() {
         PermissionUtils.openAccessibilitySettings(context)
-    }
-
-    fun openOverlaySettings() {
-        PermissionUtils.openOverlaySettings(context)
     }
 
     fun openPowerPolicySettings() {

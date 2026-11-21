@@ -43,7 +43,6 @@ class SettingsRepository(private val context: Context) {
         val LAUNCHER_MODE = booleanPreferencesKey("launcher_mode")
         val FLOATING_BALL_ENABLED = booleanPreferencesKey("floating_ball_enabled")
         val AUTO_START_ENABLED = booleanPreferencesKey("auto_start_enabled")
-        val PASSWORD = stringPreferencesKey("password")
         val IS_DEFAULT_LAUNCHER = booleanPreferencesKey("is_default_launcher")
         val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
         val WEATHER_PROVINCE = stringPreferencesKey("weather_province")
@@ -70,7 +69,6 @@ class SettingsRepository(private val context: Context) {
     val launcherMode: Flow<Boolean> = dataStore.data.map { it[LAUNCHER_MODE] ?: true }
     val floatingBallEnabled: Flow<Boolean> = dataStore.data.map { it[FLOATING_BALL_ENABLED] ?: true }
     val autoStartEnabled: Flow<Boolean> = dataStore.data.map { it[AUTO_START_ENABLED] ?: true }
-    val password: Flow<String> = dataStore.data.map { it[PASSWORD] ?: "123456" }
     
     // 桌面启动器设置
     val isDefaultLauncher: Flow<Boolean> = dataStore.data.map { it[IS_DEFAULT_LAUNCHER] ?: false }
@@ -110,7 +108,6 @@ class SettingsRepository(private val context: Context) {
             launcherMode = preferences[LAUNCHER_MODE] ?: true,
             floatingBallEnabled = preferences[FLOATING_BALL_ENABLED] ?: true,
             autoStartEnabled = preferences[AUTO_START_ENABLED] ?: true,
-            password = preferences[PASSWORD] ?: "123456",
             isDefaultLauncher = preferences[IS_DEFAULT_LAUNCHER] ?: false
         )
     }
@@ -180,10 +177,6 @@ class SettingsRepository(private val context: Context) {
         dataStore.edit { it[AUTO_START_ENABLED] = enabled }
     }
 
-    suspend fun updatePassword(newPassword: String) {
-        dataStore.edit { it[PASSWORD] = newPassword }
-    }
-
     suspend fun updateIsDefaultLauncher(isDefault: Boolean) {
         dataStore.edit { it[IS_DEFAULT_LAUNCHER] = isDefault }
     }
@@ -215,13 +208,6 @@ class SettingsRepository(private val context: Context) {
      * 同步读取引导完成标记，供 Launcher Activity 启动时判断
      */
     suspend fun isOnboardingCompleted(): Boolean = onboardingCompleted.first()
-
-    /**
-     * 验证密码
-     */
-    suspend fun verifyPassword(inputPassword: String): Boolean {
-        return password.map { it == inputPassword }.first()
-    }
 
     /**
      * 格式化时间显示

@@ -174,7 +174,9 @@ class MainViewModel @Inject constructor(
             contactRepository.allContacts.collect { list ->
                 val nicknames = linkedSetOf<String>()
                 list.forEach { contact ->
-                    contact.wechatNickname?.trim()?.takeIf { it.isNotBlank() }?.let { nicknames.add(it) }
+                    if (contact.trustedForAutoAnswer) {
+                        contact.wechatNickname?.trim()?.takeIf { it.isNotBlank() }?.let { nicknames.add(it) }
+                    }
                 }
                 WeChatData.allowedCallers = nicknames
             }

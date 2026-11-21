@@ -35,7 +35,6 @@ fun OnboardingScreen(
     state: OnboardingState,
     onRequestRuntimePermissions: () -> Unit,
     onOpenAccessibilitySettings: () -> Unit,
-    onOpenOverlaySettings: () -> Unit,
     onOpenPowerPolicySettings: () -> Unit,
     onOpenAutoStartSettings: () -> Unit,
     onStart: () -> Unit
@@ -102,17 +101,6 @@ fun OnboardingScreen(
                     actionText = stringResource(R.string.onboarding_action_request),
                     onAction = onOpenAccessibilitySettings,
                     hint = stringResource(R.string.onboarding_accessibility_how_to)
-                )
-
-                Spacer(Modifier.height(16.dp))
-
-                PermissionGroupCard(
-                    icon = FirstSightIcons.Layers,
-                    title = stringResource(R.string.onboarding_group_overlay),
-                    description = stringResource(R.string.onboarding_group_overlay_desc),
-                    granted = state.overlayGranted,
-                    actionText = stringResource(R.string.onboarding_action_request),
-                    onAction = onOpenOverlaySettings
                 )
 
                 Spacer(Modifier.height(16.dp))
