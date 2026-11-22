@@ -60,12 +60,9 @@ class ReminderReceiver : BroadcastReceiver() {
         val reminder = reminderRepository.getReminderById(reminderId) ?: return
         if (!reminder.enabled) return
 
-        if (!isSnooze) {
-            if (reminder.onceAt != null) {
-                reminderRepository.setEnabled(reminder.id, false)
-            } else {
-                reminderScheduler.schedule(reminder)
-            }
+        // 一次性提醒在用户确认前保持 enabled，否则“10 分钟后再提醒”触发时会被禁用检查拦截。
+        if (!isSnooze && reminder.onceAt == null) {
+            reminderScheduler.schedule(reminder)
         }
 
         ReminderNotifier.show(context, reminder)

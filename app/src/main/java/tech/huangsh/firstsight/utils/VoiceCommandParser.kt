@@ -42,16 +42,20 @@ object VoiceCommandParser {
                 .replace("呼叫", "")
                 .replace("打给", "")
                 .replace("给", "")
-            val contact = contacts.firstOrNull {
-                it.name.isNotBlank() && (query.contains(it.name) || it.name.contains(query))
+            val contact = query.takeIf { it.isNotBlank() }?.let { nameQuery ->
+                contacts.firstOrNull {
+                    it.name.isNotBlank() && (nameQuery.contains(it.name) || it.name.contains(nameQuery))
+                }
             }
             if (contact != null) return VoiceCommand.CallContact(contact)
         }
 
         if (text.startsWith("打开") || text.startsWith("启动")) {
             val query = text.removePrefix("打开").removePrefix("启动")
-            val app = apps.firstOrNull {
-                it.appName.isNotBlank() && (query.contains(it.appName) || it.appName.contains(query))
+            val app = query.takeIf { it.isNotBlank() }?.let { appQuery ->
+                apps.firstOrNull {
+                    it.appName.isNotBlank() && (appQuery.contains(it.appName) || it.appName.contains(appQuery))
+                }
             }
             if (app != null) return VoiceCommand.OpenApp(app)
         }

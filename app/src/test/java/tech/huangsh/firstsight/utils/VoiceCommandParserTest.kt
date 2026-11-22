@@ -51,6 +51,16 @@ class VoiceCommandParserTest {
     fun unknownCommandDoesNothing() {
         assertTrue(VoiceCommandParser.parse("今天吃什么", contacts, apps) is VoiceCommand.Unknown)
     }
+
+    @Test
+    fun blankCallQueryDoesNotPickFirstContact() {
+        assertTrue(VoiceCommandParser.parse("打电话", contacts, apps) is VoiceCommand.Unknown)
+    }
+
+    @Test
+    fun blankOpenQueryDoesNotPickFirstApp() {
+        assertTrue(VoiceCommandParser.parse("打开", contacts, apps) is VoiceCommand.Unknown)
+    }
 }
 
 class ReminderTimeUtilsTest {

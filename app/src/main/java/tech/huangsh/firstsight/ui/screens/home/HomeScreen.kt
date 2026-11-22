@@ -98,7 +98,7 @@ fun HomeScreen(viewModel: MainViewModel) {
     val weatherAlert = remember(weatherInfo) { WeatherAlertUtils.fromWeather(weatherInfo) }
     val alertPrefs = remember { context.getSharedPreferences("weather_alert", Context.MODE_PRIVATE) }
     var dismissedWeatherAlert by remember { mutableStateOf(alertPrefs.getString("dismissed", null)) }
-    val todayKey = remember { SimpleDateFormat("yyyyMMdd", Locale.CHINA).format(Date()) }
+    val todayKey = remember(currentDate) { SimpleDateFormat("yyyyMMdd", Locale.CHINA).format(Date()) }
     val weatherAlertKey = weatherAlert?.let { "$todayKey|${it.key}" }
     val nextReminder = remember(reminders, currentTime) {
         val now = System.currentTimeMillis()
