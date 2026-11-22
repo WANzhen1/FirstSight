@@ -32,6 +32,8 @@ import tech.huangsh.firstsight.ui.activity.AboutActivity
 import tech.huangsh.firstsight.ui.activity.AppManagementActivity
 import tech.huangsh.firstsight.ui.activity.ContactManagementActivity
 import tech.huangsh.firstsight.ui.activity.DisplaySettingsActivity
+import tech.huangsh.firstsight.ui.activity.ReminderActivity
+import tech.huangsh.firstsight.ui.activity.ToolsActivity
 import tech.huangsh.firstsight.ui.activity.VoiceSettingsActivity
 import tech.huangsh.firstsight.ui.activity.WeatherSettingsActivity
 import tech.huangsh.firstsight.ui.screens.components.CommonTopBar
@@ -78,6 +80,26 @@ fun SettingsScreen(
                 title = stringResource(R.string.app_settings),
                 onClick = {
                     val intent = Intent(context, AppManagementActivity::class.java)
+                    context.startActivity(intent)
+                }
+            )
+
+            // 提醒管理
+            SettingsItem(
+                icon = FirstSightIcons.Schedule,
+                title = stringResource(R.string.reminder_management),
+                onClick = {
+                    val intent = Intent(context, ReminderActivity::class.java)
+                    context.startActivity(intent)
+                }
+            )
+
+            // 快捷工具
+            SettingsItem(
+                icon = FirstSightIcons.Apps,
+                title = stringResource(R.string.quick_tools),
+                onClick = {
+                    val intent = Intent(context, ToolsActivity::class.java)
                     context.startActivity(intent)
                 }
             )

@@ -12,9 +12,11 @@ import kotlinx.coroutines.SupervisorJob
 import tech.huangsh.firstsight.data.local.AppDatabase
 import tech.huangsh.firstsight.data.local.dao.AppInfoDao
 import tech.huangsh.firstsight.data.local.dao.ContactDao
+import tech.huangsh.firstsight.data.local.dao.ReminderDao
 import tech.huangsh.firstsight.data.remote.WeatherService
 import tech.huangsh.firstsight.data.repository.AppRepository
 import tech.huangsh.firstsight.data.repository.ContactRepository
+import tech.huangsh.firstsight.data.repository.ReminderRepository
 import tech.huangsh.firstsight.data.repository.SettingsRepository
 import tech.huangsh.firstsight.utils.VoiceAssistant
 import javax.inject.Singleton
@@ -36,7 +38,7 @@ object AppModule {
             AppDatabase::class.java,
             "one_tap_database"
         )
-            .addMigrations(AppDatabase.MIGRATION_1_2)
+            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3)
             .fallbackToDestructiveMigration()
             .build()
     }
@@ -46,6 +48,9 @@ object AppModule {
 
     @Provides
     fun provideAppInfoDao(database: AppDatabase): AppInfoDao = database.appInfoDao()
+
+    @Provides
+    fun provideReminderDao(database: AppDatabase): ReminderDao = database.reminderDao()
 
     @Provides
     @Singleton
@@ -67,6 +72,14 @@ object AppModule {
         @ApplicationContext context: Context
     ): AppRepository {
         return AppRepository(appInfoDao, context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideReminderRepository(
+        reminderDao: ReminderDao
+    ): ReminderRepository {
+        return ReminderRepository(reminderDao)
     }
 
     @Provides

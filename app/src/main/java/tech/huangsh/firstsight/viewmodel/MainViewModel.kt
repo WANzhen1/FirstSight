@@ -27,11 +27,15 @@ import tech.huangsh.firstsight.data.model.WeatherInfo
 import tech.huangsh.firstsight.data.remote.WeatherService
 import tech.huangsh.firstsight.data.repository.AppRepository
 import tech.huangsh.firstsight.data.repository.ContactRepository
+import tech.huangsh.firstsight.data.repository.ReminderRepository
 import tech.huangsh.firstsight.data.repository.SettingsRepository
+import tech.huangsh.firstsight.service.reminder.ReminderScheduler
 import tech.huangsh.firstsight.service.wechat.FlowAbortReason
 import tech.huangsh.firstsight.service.wechat.WeChatData
 import tech.huangsh.firstsight.utils.BatteryStatus
 import tech.huangsh.firstsight.utils.DateUtils
+import tech.huangsh.firstsight.utils.FlashlightController
+import tech.huangsh.firstsight.utils.FlashlightResult
 import tech.huangsh.firstsight.utils.NetworkUtils
 import tech.huangsh.firstsight.utils.PermissionUtils
 import tech.huangsh.firstsight.utils.ToastUtils
@@ -51,6 +55,9 @@ class MainViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val voiceAssistant: VoiceAssistant,
     private val weatherService: WeatherService,
+    private val reminderRepository: ReminderRepository,
+    private val reminderScheduler: ReminderScheduler,
+    private val flashlightController: FlashlightController,
     @ApplicationContext private val appContext: Context
 ) : ViewModel() {
     
@@ -69,6 +76,14 @@ class MainViewModel @Inject constructor(
         SharingStarted.WhileSubscribed(5000),
         emptyList()
     )
+
+    val reminders = reminderRepository.allReminders.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        emptyList()
+    )
+
+    val flashlightOn = flashlightController.isOn
     
     // 时间和日期
     private val _currentTime = MutableStateFlow("")
@@ -129,6 +144,7 @@ class MainViewModel @Inject constructor(
         updateTime()
         // 启动时更新天气
         updateWeather()
+        viewModelScope.launch { reminderScheduler.scheduleAll() }
         refreshAccessibilityStatus()
         observeAccessibilitySetting()
         registerBatteryReceiver()
@@ -412,6 +428,56 @@ class MainViewModel @Inject constructor(
                 text = parts.joinToString("，"),
                 volume = current.voiceVolume
             )
+        }
+    }
+    
+    /**
+     * 供首页语音指令、天气提醒等外部场景复用同一套语音开关和音量。
+     */
+    fun speakText(text: String) {
+        speak(text)
+    }
+
+    fun speakWeather() {
+        val weather = weatherInfo.value ?: return
+        if (weather.weather.isBlank()) {
+            speakText(appContext.getString(R.string.weather_loading))
+            return
+        }
+        val cityPrefix = weather.city.takeIf { it.isNotBlank() } ?: ""
+        speakText("${cityPrefix}天气${weather.weather}，${weather.temperature}度")
+    }
+
+    fun speakTime() {
+        speakText("现在时间${DateUtils.formatTimeForSpeech(Date())}")
+    }
+
+    fun toggleFlashlight(): Boolean {
+        return when (val result = flashlightController.toggle()) {
+            FlashlightResult.ON -> {
+                ToastUtils.show(appContext, R.string.tool_flashlight_on)
+                speakText(appContext.getString(R.string.tool_flashlight_on))
+                true
+            }
+            FlashlightResult.OFF -> {
+                ToastUtils.show(appContext, R.string.tool_flashlight_off)
+                speakText(appContext.getString(R.string.tool_flashlight_off))
+                true
+            }
+            FlashlightResult.NO_FLASH -> {
+                ToastUtils.show(appContext, R.string.tool_flashlight_unavailable, Toast.LENGTH_LONG)
+                speakText(appContext.getString(R.string.tool_flashlight_unavailable))
+                false
+            }
+            FlashlightResult.PERMISSION_DENIED -> {
+                ToastUtils.show(appContext, R.string.tool_camera_permission_needed, Toast.LENGTH_LONG)
+                speakText(appContext.getString(R.string.tool_camera_permission_needed))
+                false
+            }
+            FlashlightResult.ERROR -> {
+                ToastUtils.show(appContext, R.string.tool_flashlight_unavailable, Toast.LENGTH_LONG)
+                false
+            }
         }
     }
     
