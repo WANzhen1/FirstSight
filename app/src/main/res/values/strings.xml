@@ -223,4 +223,70 @@
   <string name="weather_error_parse">天气数据解析失败</string>
   <string name="weather_search_hint">输入城市或省份名称搜索</string>
   <string name="weather_search_empty">未找到匹配的城市</string>
+
+  <!-- 提醒 -->
+  <string name="reminder_management">提醒管理</string>
+  <string name="reminder_add">添加提醒</string>
+  <string name="reminder_edit">编辑提醒</string>
+  <string name="reminder_empty">还没有提醒</string>
+  <string name="reminder_empty_hint">点击右下角“添加提醒”，可以设置吃药或复诊提醒</string>
+  <string name="reminder_name">提醒名称</string>
+  <string name="reminder_name_hint">例如：吃降压药</string>
+  <string name="reminder_name_required">请填写提醒名称</string>
+  <string name="reminder_note">备注</string>
+  <string name="reminder_note_hint">例如：饭后半片，温水送服</string>
+  <string name="reminder_time">提醒时间</string>
+  <string name="reminder_repeat">重复</string>
+  <string name="reminder_date">提醒日期</string>
+  <string name="reminder_type_medication">吃药</string>
+  <string name="reminder_type_appointment">复诊/其他</string>
+  <string name="reminder_delete_title">删除提醒</string>
+  <string name="reminder_delete_confirm">确定删除“%1$s”吗？</string>
+  <string name="reminder_save">保存提醒</string>
+  <string name="reminder_time_invalid">请选择未来的时间</string>
+  <string name="reminder_notification_permission_hint">通知权限未开启，到点可能收不到提醒</string>
+  <string name="reminder_notification_title">提醒时间到了</string>
+  <string name="reminder_notification_medication_title">该吃药了</string>
+  <string name="reminder_notification_taken">已服用</string>
+  <string name="reminder_notification_snooze">10分钟后再提醒</string>
+  <string name="reminder_notification_channel">服药与日程提醒</string>
+  <string name="reminder_notification_channel_desc">吃药、复诊和日程提醒通知</string>
+
+  <!-- 快捷工具 -->
+  <string name="quick_tools">快捷工具</string>
+  <string name="tool_title">快捷工具</string>
+  <string name="tool_hint">选择一个工具</string>
+  <string name="tool_voice">语音</string>
+  <string name="tool_flashlight">手电</string>
+  <string name="tool_flashlight_on">手电筒已打开</string>
+  <string name="tool_flashlight_off">手电筒已关闭</string>
+  <string name="tool_flashlight_on_short">已打开</string>
+  <string name="tool_flashlight_off_short">点击打开</string>
+  <string name="tool_flashlight_unavailable">这台手机没有可用的闪光灯</string>
+  <string name="tool_camera_permission_needed">需要相机权限才能使用手电筒</string>
+  <string name="tool_magnifier">放大镜</string>
+  <string name="tool_magnifier_desc">看小字、药盒</string>
+  <string name="tool_magnifier_permission">需要相机权限才能使用放大镜</string>
+  <string name="tool_open_camera_permission">开启相机权限</string>
+  <string name="tool_camera_unavailable">无法打开相机</string>
+  <string name="tool_back">返回工具</string>
+  <string name="tool_zoom">放大 %.1f 倍</string>
+  <string name="tool_calculator">计算器</string>
+  <string name="tool_calculator_desc">大按键计算</string>
+  <string name="tool_alarm">闹钟</string>
+  <string name="tool_alarm_desc">打开系统闹钟</string>
+  <string name="tool_alarm_unavailable">没有找到系统闹钟应用</string>
+
+  <!-- 语音指令 -->
+  <string name="voice_command_prompt">请说，例如：给女儿打电话、打开微信、今天天气</string>
+  <string name="voice_command_unavailable">没有找到语音识别服务</string>
+  <string name="voice_command_unknown">没有听懂，请再说一遍</string>
+  <string name="voice_command_no_phone">%1$s没有电话号码</string>
+  <string name="voice_command_call_confirm">已找到%1$s，请确认拨打电话</string>
+
+  <!-- 天气提醒 -->
+  <string name="weather_alert_dismiss">知道了</string>
+  <string name="reminder_medication_card">吃药提醒</string>
+  <string name="reminder_schedule_card">日程提醒</string>
+  <string name="reminder_speak">播报</string>
 </resources>

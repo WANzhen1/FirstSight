@@ -2,6 +2,9 @@ package tech.huangsh.firstsight.ui.theme
 
 import androidx.compose.material.icons.materialIcon
 import androidx.compose.material.icons.materialPath
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.PathParser
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
@@ -756,4 +759,75 @@ object FirstSightIcons {
             }
         }
     }
+
+    val Mic: ImageVector by lazy {
+        materialIcon(name = "Filled.Mic") {
+            materialPath {
+                moveTo(12f, 14f)
+                curveTo(13.66f, 14f, 14.99f, 12.66f, 14.99f, 11f)
+                lineTo(15f, 5f)
+                curveTo(15f, 3.34f, 13.66f, 2f, 12f, 2f)
+                reflectiveCurveTo(9f, 3.34f, 9f, 5f)
+                verticalLineTo(11f)
+                curveTo(9f, 12.66f, 10.34f, 14f, 12f, 14f)
+                close()
+                moveTo(17.3f, 11f)
+                curveTo(17.3f, 14f, 14.76f, 16.1f, 12f, 16.1f)
+                reflectiveCurveTo(6.7f, 14f, 6.7f, 11f)
+                horizontalLineTo(5f)
+                curveTo(5f, 14.41f, 7.72f, 17.23f, 11f, 17.72f)
+                verticalLineTo(21f)
+                horizontalLineTo(13f)
+                verticalLineTo(17.72f)
+                curveTo(16.28f, 17.24f, 19f, 14.42f, 19f, 11f)
+                horizontalLineTo(17.3f)
+                close()
+            }
+        }
+    }
+
+    val Flashlight: ImageVector by lazy {
+        materialIcon(name = "Filled.FlashlightCustom") {
+            addPath(
+                pathData = PathParser().parsePathString(
+                    "M6,2h12v6l-2,2v10c0,1.1-0.9,2-2,2h-4c-1.1,0-2-0.9-2-2V10L6,8V2z " +
+                        "M8,4v3h8V4H8z M10,10v2h4v-2H10z"
+                ).toNodes(),
+                fill = SolidColor(Color.Black)
+            )
+        }
+    }
+
+    val Search: ImageVector by lazy {
+        materialIcon(name = "Filled.SearchCustom") {
+            addPath(
+                pathData = PathParser().parsePathString(
+                    "M15.5,14h-0.79l-0.28,-0.27C15.41,12.59,16,11.11,16,9.5 " +
+                        "C16,5.91,13.09,3,9.5,3S3,5.91,3,9.5S5.91,16,9.5,16 " +
+                        "c1.61,0,3.09,-0.59,4.23,-1.57l0.27,0.28v0.79l5,4.99L20.49,19L15.5,14z " +
+                        "M9.5,14C7.01,14,5,11.99,5,9.5S7.01,5,9.5,5S14,7.01,14,9.5S11.99,14,9.5,14z"
+                ).toNodes(),
+                fill = SolidColor(Color.Black)
+            )
+        }
+    }
+
+    val Calculate: ImageVector by lazy {
+        materialIcon(name = "Filled.CalculateCustom") {
+            addPath(
+                pathData = PathParser().parsePathString(
+                    "M19,3H5C3.9,3,3,3.9,3,5v14c0,1.1,0.9,2,2,2h14c1.1,0,2,-0.9,2,-2V5 " +
+                        "C21,3.9,20.1,3,19,3z " +
+                        "M13.03,7.06L14.09,6l1.41,1.41L16.91,6l1.06,1.06l-1.41,1.41 " +
+                        "l1.41,1.41l-1.06,1.06L15.5,9.54l-1.41,1.41l-1.06,-1.06l1.41,-1.41L13.03,7.06z " +
+                        "M6.25,7.72h5v1.5h-5V7.72z M6.25,12.48h5v1.5h-5V12.48z " +
+                        "M6.25,17.24h5v1.5h-5V17.24z " +
+                        "M13.03,16.94l-1.41,-1.41l1.06,-1.06l1.41,1.41l1.41,-1.41l1.06,1.06 " +
+                        "l-1.41,1.41l1.41,1.41l-1.06,1.06L15.5,17.99l-1.41,1.41l-1.06,-1.06L13.03,16.94z"
+                ).toNodes(),
+                fill = SolidColor(Color.Black)
+            )
+        }
+    }
+
 }

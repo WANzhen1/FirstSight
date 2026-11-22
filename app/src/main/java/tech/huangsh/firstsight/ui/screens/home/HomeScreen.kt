@@ -2,8 +2,11 @@ package tech.huangsh.firstsight.ui.screens.home
 
 import android.app.Activity
 import android.app.KeyguardManager
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import android.provider.AlarmClock
+import android.speech.RecognizerIntent
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -36,6 +39,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
@@ -48,15 +52,27 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.unit.sp
 import tech.huangsh.firstsight.R
 import tech.huangsh.firstsight.data.model.AppInfo
+import tech.huangsh.firstsight.data.model.Reminder
+import tech.huangsh.firstsight.ui.activity.ReminderActivity
 import tech.huangsh.firstsight.ui.activity.SettingsActivity
+import tech.huangsh.firstsight.ui.activity.ToolsActivity
 import tech.huangsh.firstsight.ui.screens.components.ContactActionBottomSheet
 import tech.huangsh.firstsight.ui.screens.components.ContactItem
 import tech.huangsh.firstsight.ui.theme.FirstSightStyle
 import tech.huangsh.firstsight.ui.theme.FirstSightTheme
 import tech.huangsh.firstsight.utils.ImageUtils
+import tech.huangsh.firstsight.utils.ReminderTimeUtils
 import tech.huangsh.firstsight.utils.ToastUtils
+import tech.huangsh.firstsight.utils.VoiceCommand
+import tech.huangsh.firstsight.utils.VoiceCommandParser
+import tech.huangsh.firstsight.utils.WeatherAlert
+import tech.huangsh.firstsight.utils.WeatherAlertUtils
 import tech.huangsh.firstsight.utils.rememberBatteryStatus
 import tech.huangsh.firstsight.viewmodel.MainViewModel
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,6 +92,34 @@ fun HomeScreen(viewModel: MainViewModel) {
     val accessibilityDismissed by viewModel.accessibilityReminderDismissed.collectAsState()
     val isNetworkAvailable by viewModel.isNetworkAvailable.collectAsState()
     val isSimReady by viewModel.isSimReady.collectAsState()
+    val reminders by viewModel.reminders.collectAsState()
+    val flashlightOn by viewModel.flashlightOn.collectAsState()
+
+    val weatherAlert = remember(weatherInfo) { WeatherAlertUtils.fromWeather(weatherInfo) }
+    val alertPrefs = remember { context.getSharedPreferences("weather_alert", Context.MODE_PRIVATE) }
+    var dismissedWeatherAlert by remember { mutableStateOf(alertPrefs.getString("dismissed", null)) }
+    val todayKey = remember { SimpleDateFormat("yyyyMMdd", Locale.CHINA).format(Date()) }
+    val weatherAlertKey = weatherAlert?.let { "$todayKey|${it.key}" }
+    val nextReminder = remember(reminders, currentTime) {
+        val now = System.currentTimeMillis()
+        reminders.asSequence()
+            .filter { it.enabled }
+            .mapNotNull { reminder ->
+                ReminderTimeUtils.nextTriggerAt(reminder, now)?.let { triggerAt -> reminder to triggerAt }
+            }
+            .minByOrNull { it.second }
+    }
+
+    LaunchedEffect(weatherAlertKey) {
+        val alert = weatherAlert
+        if (alert != null && weatherAlertKey != null) {
+            val spoken = alertPrefs.getString("spoken", null)
+            if (spoken != weatherAlertKey) {
+                viewModel.speakText(alert.message)
+                alertPrefs.edit().putString("spoken", weatherAlertKey).apply()
+            }
+        }
+    }
 
     // 连点 7 次后先弹窗确认，确认后才进入设置
     var showSettingsConfirm by remember { mutableStateOf(false) }
@@ -88,6 +132,91 @@ fun HomeScreen(viewModel: MainViewModel) {
             context.startActivity(Intent(context, SettingsActivity::class.java))
         }
     }
+    fun openSystemAlarm() {
+        val calendar = Calendar.getInstance().apply {
+            add(Calendar.HOUR_OF_DAY, 1)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+        }
+        val intent = Intent(AlarmClock.ACTION_SET_ALARM).apply {
+            putExtra(AlarmClock.EXTRA_HOUR, calendar.get(Calendar.HOUR_OF_DAY))
+            putExtra(AlarmClock.EXTRA_MINUTES, calendar.get(Calendar.MINUTE))
+            putExtra(AlarmClock.EXTRA_SKIP_UI, false)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        try {
+            context.startActivity(intent)
+        } catch (e: ActivityNotFoundException) {
+            ToastUtils.show(context, R.string.tool_alarm_unavailable)
+        }
+    }
+
+    fun handleVoiceCommand(rawText: String) {
+        when (val command = VoiceCommandParser.parse(rawText, contacts, apps)) {
+            is VoiceCommand.CallContact -> {
+                val phone = command.contact.phone?.trim()
+                if (phone.isNullOrBlank()) {
+                    viewModel.speakText(context.getString(R.string.voice_command_no_phone, command.contact.name))
+                    ToastUtils.show(context, context.getString(R.string.voice_command_no_phone, command.contact.name))
+                } else {
+                    pendingPhoneNumber = phone
+                    pendingPhoneName = command.contact.name
+                    ToastUtils.show(context, context.getString(R.string.voice_command_call_confirm, command.contact.name))
+                }
+            }
+            is VoiceCommand.OpenApp -> {
+                val intent = viewModel.launchApp(command.app.packageName)
+                if (intent != null) {
+                    runCatching { context.startActivity(intent) }
+                } else {
+                    viewModel.speakText(context.getString(R.string.voice_command_unknown))
+                }
+            }
+            VoiceCommand.SpeakWeather -> viewModel.speakWeather()
+            VoiceCommand.SpeakTime -> viewModel.speakTime()
+            VoiceCommand.OpenReminders -> context.startActivity(Intent(context, ReminderActivity::class.java))
+            VoiceCommand.OpenTools -> context.startActivity(ToolsActivity.createIntent(context))
+            VoiceCommand.ToggleFlashlight -> viewModel.toggleFlashlight()
+            VoiceCommand.OpenMagnifier -> context.startActivity(
+                ToolsActivity.createIntent(context, ToolsActivity.TOOL_MAGNIFIER)
+            )
+            VoiceCommand.OpenCalculator -> context.startActivity(
+                ToolsActivity.createIntent(context, ToolsActivity.TOOL_CALCULATOR)
+            )
+            VoiceCommand.SetAlarm -> openSystemAlarm()
+            VoiceCommand.Unknown -> {
+                viewModel.speakText(context.getString(R.string.voice_command_unknown))
+                ToastUtils.show(context, R.string.voice_command_unknown)
+            }
+        }
+    }
+
+    val speechLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val spokenText = result.data
+                ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+                ?.firstOrNull()
+            if (!spokenText.isNullOrBlank()) {
+                handleVoiceCommand(spokenText)
+            }
+        }
+    }
+
+    fun startVoiceCommand() {
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "zh-CN")
+            putExtra(RecognizerIntent.EXTRA_PROMPT, context.getString(R.string.voice_command_prompt))
+        }
+        try {
+            speechLauncher.launch(intent)
+        } catch (e: ActivityNotFoundException) {
+            ToastUtils.show(context, R.string.voice_command_unavailable, Toast.LENGTH_LONG)
+        }
+    }
+
     LaunchedEffect(Unit) {
         viewModel.openSettingsRequested.collect {
             showSettingsConfirm = true
@@ -252,6 +381,31 @@ fun HomeScreen(viewModel: MainViewModel) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            val alert = weatherAlert
+            if (alert != null && weatherAlertKey != dismissedWeatherAlert) {
+                WeatherAlertCard(
+                    alert = alert,
+                    onDismiss = {
+                        weatherAlertKey?.let { key ->
+                            dismissedWeatherAlert = key
+                            alertPrefs.edit().putString("dismissed", key).apply()
+                        }
+                    }
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            val next = nextReminder
+            if (next != null) {
+                HomeReminderCard(
+                    reminder = next.first,
+                    triggerAt = next.second,
+                    onClick = { context.startActivity(Intent(context, ReminderActivity::class.java)) },
+                    onSpeak = { viewModel.speakText(ReminderTimeUtils.buildTextForSpeech(next.first)) }
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
             // 无障碍服务未开启时持续提示，否则微信一键通话无法使用
             if (accessibilityChecked && !accessibilityEnabled && !accessibilityDismissed) {
                 AccessibilityReminderCard(
@@ -287,6 +441,20 @@ fun HomeScreen(viewModel: MainViewModel) {
             } else {
                 Spacer(modifier = Modifier.height(8.dp))
             }
+
+            QuickToolsCard(
+                flashlightOn = flashlightOn,
+                onVoice = { startVoiceCommand() },
+                onFlashlight = { viewModel.toggleFlashlight() },
+                onMagnifier = {
+                    context.startActivity(ToolsActivity.createIntent(context, ToolsActivity.TOOL_MAGNIFIER))
+                },
+                onCalculator = {
+                    context.startActivity(ToolsActivity.createIntent(context, ToolsActivity.TOOL_CALCULATOR))
+                },
+                onAlarm = { openSystemAlarm() }
+            )
+            Spacer(modifier = Modifier.height(16.dp))
 
             // 联系人网格 (每行2个)，延伸至屏幕最底部不留白
             LazyVerticalGrid(
@@ -645,6 +813,239 @@ fun AccessibilityReminderCard(
                         fontSize = 12.sp
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun QuickToolsCard(
+    flashlightOn: Boolean,
+    onVoice: () -> Unit,
+    onFlashlight: () -> Unit,
+    onMagnifier: () -> Unit,
+    onCalculator: () -> Unit,
+    onAlarm: () -> Unit
+) {
+    Card(
+        shape = FirstSightStyle.cardLarge,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            QuickToolItem(
+                icon = FirstSightIcons.Mic,
+                label = stringResource(R.string.tool_voice),
+                onClick = onVoice
+            )
+            QuickToolItem(
+                icon = FirstSightIcons.Flashlight,
+                label = stringResource(R.string.tool_flashlight),
+                active = flashlightOn,
+                onClick = onFlashlight
+            )
+            QuickToolItem(
+                icon = FirstSightIcons.Search,
+                label = stringResource(R.string.tool_magnifier),
+                onClick = onMagnifier
+            )
+            QuickToolItem(
+                icon = FirstSightIcons.Calculate,
+                label = stringResource(R.string.tool_calculator),
+                onClick = onCalculator
+            )
+            QuickToolItem(
+                icon = FirstSightIcons.Schedule,
+                label = stringResource(R.string.tool_alarm),
+                onClick = onAlarm
+            )
+        }
+    }
+}
+
+@Composable
+private fun QuickToolItem(
+    icon: ImageVector,
+    label: String,
+    active: Boolean = false,
+    onClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clip(FirstSightStyle.small)
+            .clickable { onClick() }
+            .padding(horizontal = 4.dp, vertical = 2.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(46.dp)
+                .clip(RoundedCornerShape(15.dp))
+                .background(
+                    if (active) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                modifier = Modifier.size(26.dp),
+                tint = if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1
+        )
+    }
+}
+
+@Composable
+fun WeatherAlertCard(
+    alert: WeatherAlert,
+    onDismiss: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = FirstSightStyle.cardMedium,
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(FirstSightStyle.alertGradient())
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(34.dp)
+                    .clip(FirstSightStyle.small)
+                    .background(FirstSightStyle.alertAccent),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "!",
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.ExtraBold
+                )
+            }
+
+            Spacer(Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = alert.title,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = FirstSightStyle.alertTextColor()
+                )
+                Spacer(Modifier.height(3.dp))
+                Text(
+                    text = alert.message,
+                    fontSize = 12.5.sp,
+                    lineHeight = 18.sp,
+                    color = FirstSightStyle.alertTextSubColor()
+                )
+            }
+
+            Spacer(Modifier.width(6.dp))
+
+            TextButton(onClick = onDismiss) {
+                Text(
+                    text = stringResource(R.string.weather_alert_dismiss),
+                    color = FirstSightStyle.alertTextColor(),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun HomeReminderCard(
+    reminder: Reminder,
+    triggerAt: Long,
+    onClick: () -> Unit,
+    onSpeak: () -> Unit
+) {
+    Card(
+        shape = FirstSightStyle.cardMedium,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = FirstSightIcons.Schedule,
+                    contentDescription = null,
+                    modifier = Modifier.size(26.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            Spacer(Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(
+                        if (reminder.isMedication) R.string.reminder_medication_card
+                        else R.string.reminder_schedule_card
+                    ),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = reminder.title,
+                    fontSize = 19.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "${ReminderTimeUtils.formatNextTrigger(triggerAt)} · ${ReminderTimeUtils.repeatLabel(reminder)}",
+                    fontSize = 12.5.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            TextButton(onClick = onSpeak) {
+                Text(
+                    text = stringResource(R.string.reminder_speak),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
         }
     }

@@ -13,6 +13,10 @@
   <uses-feature android:name="android.hardware.camera" android:required="false"/>
   <uses-permission android:name="android.permission.CAMERA" />
 
+  <!-- 通知与开机重新排期（提醒功能） -->
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+  <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
   <!-- 位置权限（用于天气） -->
   <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
   <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
@@ -116,12 +120,43 @@
             android:screenOrientation="user"
             android:theme="@style/Theme.FirstSight" tools:ignore="DiscouragedApi"/>
 
+    <!-- 提醒管理Activity -->
+    <activity
+            android:name=".ui.activity.ReminderActivity"
+            android:exported="false"
+            android:screenOrientation="user"
+            android:theme="@style/Theme.FirstSight" tools:ignore="DiscouragedApi"/>
+
+    <!-- 快捷工具Activity -->
+    <activity
+            android:name=".ui.activity.ToolsActivity"
+            android:exported="false"
+            android:screenOrientation="user"
+            android:theme="@style/Theme.FirstSight" tools:ignore="DiscouragedApi"/>
+
     <!-- 关于Activity -->
     <activity
             android:name=".ui.activity.AboutActivity"
             android:exported="false"
             android:screenOrientation="user"
             android:theme="@style/Theme.FirstSight" tools:ignore="DiscouragedApi"/>
+
+    <!-- 提醒触发和通知按钮 -->
+    <receiver
+            android:name=".service.reminder.ReminderReceiver"
+            android:exported="false" />
+
+    <!-- 开机、时间变更后重新排期 -->
+    <receiver
+            android:name=".service.reminder.ReminderBootReceiver"
+            android:exported="false">
+      <intent-filter>
+        <action android:name="android.intent.action.BOOT_COMPLETED" />
+        <action android:name="android.intent.action.TIME_SET" />
+        <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+        <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+      </intent-filter>
+    </receiver>
 
     <!-- 提供者用于获取已安装应用列表 -->
     <provider

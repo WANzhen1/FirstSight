@@ -15,8 +15,8 @@ android {
         applicationId = "tech.huangsh.firstsight"
         minSdk = 24
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -102,6 +102,7 @@ dependencies {
 
     // Coil (Image loading)
     implementation(libs.coil.compose)
+
 
     // Reorderable (Drag and drop)
     implementation(libs.reorderable)
