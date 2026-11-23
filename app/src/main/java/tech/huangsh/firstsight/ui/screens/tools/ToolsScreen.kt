@@ -1,8 +1,5 @@
 package tech.huangsh.firstsight.ui.screens.tools
 
-import android.content.ActivityNotFoundException
-import android.content.Intent
-import android.provider.AlarmClock
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -24,10 +21,10 @@ import tech.huangsh.firstsight.ui.activity.ToolsActivity
 import tech.huangsh.firstsight.ui.screens.components.CommonTopBar
 import tech.huangsh.firstsight.ui.theme.FirstSightIcons
 import tech.huangsh.firstsight.ui.theme.FirstSightStyle
+import tech.huangsh.firstsight.utils.AlarmLauncher
 import tech.huangsh.firstsight.utils.FlashlightResult
 import tech.huangsh.firstsight.utils.ToastUtils
 import tech.huangsh.firstsight.viewmodel.ToolsViewModel
-import java.util.Calendar
 
 @Composable
 fun ToolsScreen(
@@ -51,21 +48,8 @@ fun ToolsScreen(
     }
 
     fun openAlarm() {
-        val calendar = Calendar.getInstance().apply {
-            add(Calendar.HOUR_OF_DAY, 1)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-        }
-        val intent = Intent(AlarmClock.ACTION_SET_ALARM).apply {
-            putExtra(AlarmClock.EXTRA_HOUR, calendar.get(Calendar.HOUR_OF_DAY))
-            putExtra(AlarmClock.EXTRA_MINUTES, calendar.get(Calendar.MINUTE))
-            putExtra(AlarmClock.EXTRA_SKIP_UI, false)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        try {
-            context.startActivity(intent)
-        } catch (e: ActivityNotFoundException) {
-            ToastUtils.show(context, R.string.tool_alarm_unavailable)
+        if (!AlarmLauncher.openAlarm(context)) {
+            ToastUtils.show(context, R.string.tool_alarm_unavailable, android.widget.Toast.LENGTH_LONG)
         }
     }
 
